@@ -1,1 +1,1 @@
-# password-manager-edu
+# Password Manager (Education)
