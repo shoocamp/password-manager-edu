@@ -1,6 +1,6 @@
 import uuid
 import sqlite3
-from pswd_mngr.models import PasswordItemBase, PaaswordItemDB, PasswordItemOut
+from pswd_mngr.models import PasswordItemBase, PasswordItemDB, PasswordItemOut
 
 
 class PasswordStorage:
@@ -8,13 +8,12 @@ class PasswordStorage:
         self.conn = sqlite3.connect("passwords.db", check_same_thread=False)
 
     def save_password(self, item: PasswordItemBase):
-        password_id = str(uuid.uuid4())
-        item.id = password_id
+        item = PasswordItemDB.to_db(item)
 
         cur = self.conn.cursor()
         cur.execute(f"""
             INSERT INTO password VALUES (
-            '{password_id}',
+            '{item.id}',
             NULL,
             '{item.name}',
             '{item.site}',
@@ -28,10 +27,10 @@ class PasswordStorage:
         cur = self.conn.cursor()
         res = cur.execute(f"SELECT * FROM password WHERE id='{password_id}'").fetchone()
 
-        return PasswordItemBase.from_db(res)
+        return PasswordItemOut.from_db(res)
 
     def get_passwords(self) -> list[PasswordItemBase]:
         cur = self.conn.cursor()
         res = cur.execute("SELECT * FROM password").fetchall()
 
-        return [PasswordItemBase.from_db(item) for item in res]
+        return [PasswordItemOut.from_db(item) for item in res]
