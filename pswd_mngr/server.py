@@ -33,3 +33,15 @@ def get_password(item_id: str) -> PasswordItemOut:
     if password is None:
         raise HTTPException(status_code=404, detail="Item not found")
     return password
+
+
+@app.patch("/passwords/{item_id}")
+def update_password(item_id: str, new_password: str) -> PasswordItemOut:
+    res = storage.update_password(item_id, new_password)
+    return res
+
+
+@app.delete("/passwords/{item_id}")
+def del_password(item_id: str):
+    storage.del_password(item_id)
+    return {"message": "password removed"}
