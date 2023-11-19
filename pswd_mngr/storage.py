@@ -36,7 +36,7 @@ class PasswordStorage:
 
         return [PasswordItemOut.from_db(item) for item in res]
 
-    def update_password(self, password_id: str, new_password: str) -> PasswordItemOut | dict:
+    def update_password(self, password_id: str, new_password: str) -> PasswordItemOut | None:
         cur = self.conn.cursor()
         cur.execute(f'''
             UPDATE password SET
@@ -46,17 +46,11 @@ class PasswordStorage:
             ''')
         self.conn.commit()
 
-        if cur.rowcount == 1:
-            return self.get_password(password_id)
-        else:
-            return {"error": "Password updated failed"}
+        return self.get_password(password_id) if cur.rowcount == 1 else None
 
-    def del_password(self, password_id: str) -> dict:
+    def del_password(self, password_id: str) -> bool:
         cur = self.conn.cursor()
         cur.execute(f"DELETE FROM password WHERE id='{password_id}'")
         self.conn.commit()
 
-        if cur.rowcount == 1:
-            return {"message": "Password removed successfully"}
-        else:
-            return {"error": "Password deletion failed"}
+        return cur.rowcount == 1
