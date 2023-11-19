@@ -38,10 +38,14 @@ def get_password(item_id: str) -> PasswordItemOut:
 @app.patch("/passwords/{item_id}")
 def update_password(item_id: str, new_password: str) -> PasswordItemOut:
     res = storage.update_password(item_id, new_password)
+    if isinstance(res, dict) and "error" in res:
+        raise HTTPException(status_code=404, detail=res["error"])
     return res
 
 
 @app.delete("/passwords/{item_id}")
-def del_password(item_id: str):
-    storage.del_password(item_id)
-    return {"message": "password removed"}
+def del_password(item_id: str) -> dict:
+    res = storage.del_password(item_id)
+    if "error" in res:
+        raise HTTPException(status_code=404, detail=res["error"])
+    return res
