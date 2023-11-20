@@ -1,6 +1,7 @@
 import uuid
 import sqlite3
 from pswd_mngr.models import PasswordItemBase, PasswordItemDB, PasswordItemOut
+from datetime import datetime as dt
 
 
 class PasswordStorage:
@@ -34,3 +35,22 @@ class PasswordStorage:
         res = cur.execute("SELECT * FROM password").fetchall()
 
         return [PasswordItemOut.from_db(item) for item in res]
+
+    def update_password(self, password_id: str, new_password: str) -> PasswordItemOut | None:
+        cur = self.conn.cursor()
+        cur.execute(f'''
+            UPDATE password SET
+            password = '{new_password}',
+            updated_at = {int(dt.now().timestamp())}
+            WHERE id='{password_id}'
+            ''')
+        self.conn.commit()
+
+        return self.get_password(password_id) if cur.rowcount == 1 else None
+
+    def del_password(self, password_id: str) -> bool:
+        cur = self.conn.cursor()
+        cur.execute(f"DELETE FROM password WHERE id='{password_id}'")
+        self.conn.commit()
+
+        return cur.rowcount == 1
