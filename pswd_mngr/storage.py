@@ -30,7 +30,7 @@ class PasswordStorage:
 
         return PasswordItemOut.from_db(res)
 
-    def get_passwords(self) -> list[PasswordItemBase]:
+    def get_passwords(self) -> list[PasswordItemOut]:
         cur = self.conn.cursor()
         res = cur.execute("SELECT * FROM password").fetchall()
 
