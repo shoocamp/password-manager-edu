@@ -8,3 +8,10 @@ CREATE TABLE password
     created_at INTEGER,
     updated_at INTEGER
 );
+
+CREATE TABLE users
+(
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    name       TEXT,
+    password   TEXT
+);
