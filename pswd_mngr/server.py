@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from pswd_mngr.auth import Auth
-from pswd_mngr.models import PasswordItemBase, Response, ResponseOK, User, PasswordItemDB
+from pswd_mngr.models import PasswordItemBase, Response, ResponseOK, UserDB, PasswordItemDB, UserOut
 from pswd_mngr.storage import PasswordStorage
 
 logger = logging.getLogger(__name__)
@@ -17,14 +17,14 @@ auth = Auth()
 
 
 @app.post("/passwords/")
-def create_password_item(item: PasswordItemBase, token: Annotated[User, Depends(auth.decode_token)]) -> Response:
+def create_password_item(item: PasswordItemBase, token: Annotated[UserDB, Depends(auth.decode_token)]) -> Response:
     logger.info(f"password item: {item}")
     response = storage.save_password(PasswordItemDB(**item.model_dump(), id=str(uuid.uuid4()),user_id=token["user_id"]))
     return response
 
 
 @app.get("/passwords/")
-def get_passwords(token: Annotated[User, Depends(auth.decode_token)]) -> Response:
+def get_passwords(token: Annotated[UserDB, Depends(auth.decode_token)]) -> Response:
     result = []
     for v in storage.get_passwords(token["user_id"]):
         result.append(v)
@@ -33,7 +33,7 @@ def get_passwords(token: Annotated[User, Depends(auth.decode_token)]) -> Respons
 
 
 @app.get("/passwords/{item_id}")
-def get_password(item_id: str, token: Annotated[User, Depends(auth.decode_token)]) -> Response:
+def get_password(item_id: str, token: Annotated[UserDB, Depends(auth.decode_token)]) -> Response:
     password = storage.get_password(item_id, token["user_id"])
     if password is None:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -42,7 +42,7 @@ def get_password(item_id: str, token: Annotated[User, Depends(auth.decode_token)
 
 @app.patch("/passwords/{item_id}")
 def update_password(item_id: str, new_password: str,
-                    token: Annotated[User, Depends(auth.decode_token)]) -> Response:
+                    token: Annotated[UserDB, Depends(auth.decode_token)]) -> Response:
     password_item = storage.update_password(item_id, new_password, token["user_id"])
     if password_item is None:
         raise HTTPException(status_code=404, detail="Password updated failed")
@@ -50,7 +50,7 @@ def update_password(item_id: str, new_password: str,
 
 
 @app.delete("/passwords/{item_id}")
-def del_password(item_id: str, token: Annotated[User, Depends(auth.decode_token)]) -> Response:
+def del_password(item_id: str, token: Annotated[UserDB, Depends(auth.decode_token)]) -> Response:
     res = storage.del_password(item_id, token["user_id"])
     if not res:
         raise HTTPException(status_code=404, detail="Password deletion failed")
@@ -58,7 +58,7 @@ def del_password(item_id: str, token: Annotated[User, Depends(auth.decode_token)
 
 
 @app.post("/signup")
-def create_user(user: User) -> Response:
+def create_user(user: UserOut) -> Response:
     res = storage.create_user(user)
     return ResponseOK(message="user was created", data=res)
 

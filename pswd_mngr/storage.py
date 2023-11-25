@@ -3,7 +3,7 @@ from datetime import datetime as dt
 
 from fastapi.security import OAuth2PasswordRequestForm
 
-from pswd_mngr.models import PasswordItemDB, PasswordItemOut, User, ResponseOK, Response
+from pswd_mngr.models import PasswordItemDB, PasswordItemOut, UserDB, ResponseOK, Response, UserOut
 
 
 class PasswordStorage:
@@ -73,7 +73,7 @@ class PasswordStorage:
 
         return cur.rowcount == 1
 
-    def create_user(self, user: User) -> User:
+    def create_user(self, user: UserOut) -> UserDB:
         cur = self.conn.cursor()
 
         cur.execute(f"""
@@ -96,7 +96,7 @@ class PasswordStorage:
 
         res = cur.execute("SELECT * FROM users ORDER BY id DESC LIMIT 1").fetchone()
 
-        return User.from_db(res)
+        return UserDB.from_db(res)
 
     def get_user_from_db(self, user: OAuth2PasswordRequestForm):
         cur = self.conn.cursor()
@@ -106,4 +106,4 @@ class PasswordStorage:
             AND password='{user.password}'
             ''').fetchone()
 
-        return User.from_db(res) if res else None
+        return UserDB.from_db(res) if res else None

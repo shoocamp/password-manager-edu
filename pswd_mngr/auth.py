@@ -4,7 +4,7 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 
-from pswd_mngr.models import User
+from pswd_mngr.models import UserDB
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
@@ -15,7 +15,7 @@ EXP_MINUTES = 120
 
 class Auth:
     @staticmethod
-    def encode_token(user: User) -> str:
+    def encode_token(user: UserDB) -> str:
         data = {
             "sub": user.name,
             "user_id": user.id,

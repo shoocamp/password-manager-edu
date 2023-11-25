@@ -69,14 +69,17 @@ class PasswordItemOut(PasswordItemBase):
         )
 
 
-class User(BaseModel):
-    id: int | None = None
+class UserOut(BaseModel):
     name: str
     password: str
 
+
+class UserDB(UserOut):
+    id: int | None = None
+
     @staticmethod
-    def from_db(res: tuple) -> 'User':
-        return User(
+    def from_db(res: tuple) -> 'UserDB':
+        return UserDB(
             id=res[0],
             name=res[1],
             password=res[2]
