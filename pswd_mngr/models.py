@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime as dt
 from enum import Enum
 from typing import Optional, Any
+
 from pydantic import BaseModel
 
 
@@ -27,7 +28,7 @@ class PasswordItemBase(BaseModel):
 
 
 class PasswordItemDB(PasswordItemBase):
-    id: str = str(uuid.uuid4())
+    uuid: str | None
     user_id: int | None = None
     created_at: dt = dt.now()
     updated_at: dt = dt.now()
@@ -35,7 +36,7 @@ class PasswordItemDB(PasswordItemBase):
     @staticmethod
     def from_db(res: tuple) -> 'PasswordItemBase':
         return PasswordItemDB(
-            id=res[0],
+            uuid=res[0],
             user_id=res[1],
             name=res[2],
             site=res[3],
@@ -46,19 +47,19 @@ class PasswordItemDB(PasswordItemBase):
 
     @staticmethod
     def to_db(item: PasswordItemBase) -> 'PasswordItemDB':
-        return PasswordItemDB(**item.model_dump())
+        return PasswordItemDB(**item.model_dump(), uuid=str(uuid.uuid4()))
 
 
 class PasswordItemOut(PasswordItemBase):
-    id: str
+    uuid: str | None
+    user_id: int | None = None
     created_at: dt
     updated_at: dt
-    user_id: int | None = None
 
     @staticmethod
     def from_db(res: tuple) -> 'PasswordItemOut':
         return PasswordItemOut(
-            id=res[0],
+            uuid=res[0],
             user_id=res[1],
             name=res[2],
             site=res[3],
@@ -68,7 +69,21 @@ class PasswordItemOut(PasswordItemBase):
         )
 
 
-class User(BaseModel):
+class UserOut(BaseModel):
+    name: str
+
+
+class UserIn(UserOut):
+    password: str
+
+
+class UserDB(UserIn):
     id: int | None = None
-    name: str | None = None
-    password: str | None = None
+
+    @staticmethod
+    def from_db(res: tuple) -> 'UserDB':
+        return UserDB(
+            id=res[0],
+            name=res[1],
+            password=res[2]
+        )

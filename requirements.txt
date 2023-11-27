@@ -1,3 +1,6 @@
 pytest
 fastapi[all]
 requests
+pyjwt
+python-jose[cryptography]
+passlib[bcrypt]
