@@ -28,7 +28,7 @@ class PasswordItemBase(BaseModel):
 
 
 class PasswordItemDB(PasswordItemBase):
-    id: str | None
+    uuid: str | None
     user_id: int | None = None
     created_at: dt = dt.now()
     updated_at: dt = dt.now()
@@ -36,7 +36,7 @@ class PasswordItemDB(PasswordItemBase):
     @staticmethod
     def from_db(res: tuple) -> 'PasswordItemBase':
         return PasswordItemDB(
-            id=res[0],
+            uuid=res[0],
             user_id=res[1],
             name=res[2],
             site=res[3],
@@ -47,11 +47,11 @@ class PasswordItemDB(PasswordItemBase):
 
     @staticmethod
     def to_db(item: PasswordItemBase) -> 'PasswordItemDB':
-        return PasswordItemDB(**item.model_dump(), id=str(uuid.uuid4()))
+        return PasswordItemDB(**item.model_dump(), uuid=str(uuid.uuid4()))
 
 
 class PasswordItemOut(PasswordItemBase):
-    id: str | None
+    uuid: str | None
     user_id: int | None = None
     created_at: dt
     updated_at: dt
@@ -59,7 +59,7 @@ class PasswordItemOut(PasswordItemBase):
     @staticmethod
     def from_db(res: tuple) -> 'PasswordItemOut':
         return PasswordItemOut(
-            id=res[0],
+            uuid=res[0],
             user_id=res[1],
             name=res[2],
             site=res[3],
@@ -71,10 +71,13 @@ class PasswordItemOut(PasswordItemBase):
 
 class UserOut(BaseModel):
     name: str
+
+
+class UserIn(UserOut):
     password: str
 
 
-class UserDB(UserOut):
+class UserDB(UserIn):
     id: int | None = None
 
     @staticmethod

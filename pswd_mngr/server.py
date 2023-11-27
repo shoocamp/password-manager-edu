@@ -6,8 +6,8 @@ from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from pswd_mngr.auth import Auth
-from pswd_mngr.models import PasswordItemBase, Response, ResponseOK, UserDB, PasswordItemDB, UserOut
-from pswd_mngr.storage import PasswordStorage
+from pswd_mngr.models import PasswordItemBase, Response, ResponseOK, UserDB, PasswordItemDB, UserIn
+from pswd_mngr.storage import PasswordStorage, DuplicateError
 
 logger = logging.getLogger(__name__)
 
@@ -19,8 +19,13 @@ auth = Auth()
 @app.post("/passwords/")
 def create_password_item(item: PasswordItemBase, token: Annotated[UserDB, Depends(auth.decode_token)]) -> Response:
     logger.info(f"password item: {item}")
-    response = storage.save_password(PasswordItemDB(**item.model_dump(), id=str(uuid.uuid4()),user_id=token["user_id"]))
-    return response
+    try:
+        saved_item = storage.save_password(
+            PasswordItemDB(**item.model_dump(), uuid=str(uuid.uuid4()), user_id=token["user_id"]))
+    except DuplicateError as e:
+        logger.error(f"Error when save password: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    return ResponseOK(data=saved_item)
 
 
 @app.get("/passwords/")
@@ -51,25 +56,35 @@ def update_password(item_id: str, new_password: str,
 
 @app.delete("/passwords/{item_id}")
 def del_password(item_id: str, token: Annotated[UserDB, Depends(auth.decode_token)]) -> Response:
-    res = storage.del_password(item_id, token["user_id"])
-    if not res:
-        raise HTTPException(status_code=404, detail="Password deletion failed")
+    row_deleted = storage.del_password(item_id, token["user_id"])
+    if row_deleted == 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"{item_id} wasn't updated")
+
+    if row_deleted > 1:
+        logger.error(f"storage.del_password delete more then one password ({row_deleted})")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     return ResponseOK(message="Password removed successfully")
 
 
 @app.post("/signup")
-def create_user(user: UserOut) -> Response:
-    res = storage.create_user(user)
+def create_user(user: UserIn) -> Response:
+    user.password = Auth.get_password_hash(user.password)
+    try:
+        res = storage.create_user(user)
+    except DuplicateError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     return ResponseOK(message="user was created", data=res)
 
 
 @app.post("/login")
-def login(user: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    user_from_db = storage.get_user_from_db(user)
-    if user_from_db is None:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
-                            detail="Invalid credentials",
-                            headers={"WWW-Authenticate": "Bearer"})
-    return {"access_token": auth.encode_token(user_from_db)}
+def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    user = Auth.authenticate_user(form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
-
+    return {"access_token": auth.encode_token(user)}

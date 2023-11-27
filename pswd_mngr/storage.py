@@ -1,42 +1,42 @@
 import sqlite3
 from datetime import datetime as dt
+from sqlite3 import IntegrityError
 
 from fastapi.security import OAuth2PasswordRequestForm
 
-from pswd_mngr.models import PasswordItemDB, PasswordItemOut, UserDB, ResponseOK, Response, UserOut
+from pswd_mngr.models import PasswordItemDB, PasswordItemOut, UserDB, UserOut, UserIn
+
+
+class StorageError(Exception):
+    pass
+
+
+class DuplicateError(StorageError):
+    pass
 
 
 class PasswordStorage:
     def __init__(self):
         self.conn = sqlite3.connect("passwords.db", check_same_thread=False)
 
-    def save_password(self, item: PasswordItemDB) -> Response:
+    def save_password(self, item: PasswordItemDB):
         cur = self.conn.cursor()
-        cur.execute(f"""
-            SELECT EXISTS(
-                SELECT 1
-                FROM password
-                WHERE user_id = {int(item.user_id)}
-                AND name = '{item.name}')
-            """)
-        exists = cur.fetchone()[0]
+        try:
+            cur.execute(f"""
+                INSERT INTO password VALUES (
+                '{item.uuid}',
+                {item.user_id},
+                '{item.name}',
+                '{item.site}',
+                '{item.password}',
+                {int(item.created_at.timestamp())},
+                {int(item.updated_at.timestamp())})
+                """)
+        except IntegrityError:
+            raise DuplicateError(f"Password for '{item.name}' already exists. User ID {item.user_id}")
 
-        if exists:
-            raise Exception(f"Password for {item.name} already exists. User ID {item.user_id}")
-
-        cur.execute(f"""
-            INSERT INTO password VALUES (
-            '{item.id}',
-            {item.user_id},
-            '{item.name}',
-            '{item.site}',
-            '{item.password}',
-            {int(item.created_at.timestamp())},
-            {int(item.updated_at.timestamp())})
-            """)
         self.conn.commit()
-
-        return ResponseOK(message="password was created")
+        return self.get_password(item.uuid, item.user_id)
 
     def get_password(self, password_id: str, user_id: int) -> PasswordItemOut:
         cur = self.conn.cursor()
@@ -66,44 +66,35 @@ class PasswordStorage:
 
         return self.get_password(password_id, user_id) if cur.rowcount == 1 else None
 
-    def del_password(self, password_id: str, user_id: int) -> bool:
+    def del_password(self, password_id: str, user_id: int) -> int:
         cur = self.conn.cursor()
         cur.execute(f"DELETE FROM password WHERE id='{password_id}' AND user_id={user_id}")
         self.conn.commit()
+        return cur.rowcount
 
-        return cur.rowcount == 1
-
-    def create_user(self, user: UserOut) -> UserDB:
+    def create_user(self, user: UserIn) -> UserDB:
         cur = self.conn.cursor()
 
-        cur.execute(f"""
-            SELECT EXISTS(
-                SELECT 1
-                FROM users
-                WHERE name = '{user.name}')
-            """)
-        exists = cur.fetchone()[0]
+        try:
+            cur.execute(f"""
+                INSERT INTO users (name, password) VALUES (
+                '{user.name}',
+                '{user.password}')
+                """)
+        except IntegrityError:
+            raise DuplicateError(f"Username: {user.name} already exists.")
 
-        if exists:
-            raise Exception(f"Username: {user.name} already exists.")
-
-        cur.execute(f"""
-            INSERT INTO users (name, password) VALUES (
-            '{user.name}',
-            '{user.password}')
-            """)
         self.conn.commit()
 
         res = cur.execute("SELECT * FROM users ORDER BY id DESC LIMIT 1").fetchone()
 
         return UserDB.from_db(res)
 
-    def get_user_from_db(self, user: OAuth2PasswordRequestForm):
+    def get_user_by_name(self, user_name) -> UserDB:
         cur = self.conn.cursor()
         res = cur.execute(f'''
             SELECT * FROM users WHERE
-            name='{user.username}'
-            AND password='{user.password}'
+            name='{user_name}'
             ''').fetchone()
 
         return UserDB.from_db(res) if res else None
