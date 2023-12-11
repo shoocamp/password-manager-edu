@@ -1,7 +1,11 @@
+import argparse
 import logging
 import uuid
+import tomllib
+
 from typing import Annotated
 
+import uvicorn
 from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -11,14 +15,19 @@ from pswd_mngr.storage import PasswordStorage, DuplicateError
 
 logger = logging.getLogger(__name__)
 
+parser = argparse.ArgumentParser()
+parser.add_argument('-c', '--config', default="config.toml")
+args = parser.parse_args()
+config = tomllib.load(open(args.config, "rb"))
+logger.info(config)
+
 app = FastAPI()
-storage = PasswordStorage()
-auth = Auth()
+storage = PasswordStorage(config['database']['name'])
+auth = Auth(storage)
 
 
 @app.post("/passwords/")
 def create_password_item(item: PasswordItemBase, token: Annotated[UserDB, Depends(auth.decode_token)]) -> Response:
-    logger.info(f"password item: {item}")
     try:
         saved_item = storage.save_password(
             PasswordItemDB(**item.model_dump(), uuid=str(uuid.uuid4()), user_id=token["user_id"]))
@@ -88,3 +97,7 @@ def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
         )
 
     return {"access_token": auth.encode_token(user)}
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", log_level="info", reload=True)

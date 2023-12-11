@@ -15,10 +15,11 @@ SECRET_KEY = "mysecretkey"
 ALGORITHM = "HS256"
 EXP_MINUTES = 120
 
-storage = PasswordStorage()
-
 
 class Auth:
+    def __init__(self, storage: PasswordStorage):
+        self.storage = storage
+
     @staticmethod
     def verify_password(plain_password, hashed_password):
         return pwd_context.verify(plain_password, hashed_password)
