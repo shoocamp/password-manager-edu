@@ -2,6 +2,7 @@ import logging
 import sqlite3
 from datetime import datetime as dt
 from sqlite3 import IntegrityError
+from typing import Optional
 
 from pswd_mngr.models import PasswordItemDB, PasswordItemOut, UserDB, UserIn
 
@@ -40,14 +41,12 @@ class PasswordStorage:
         self.conn.commit()
         return self.get_password(item.uuid, item.user_id)
 
-    def get_password(self, password_id: str, user_id: int) -> PasswordItemOut:
+    def get_password(self, password_id: str, user_id: int) -> Optional[PasswordItemOut]:
         cur = self.conn.cursor()
         res = cur.execute(f"SELECT * FROM password WHERE id='{password_id}' AND user_id={user_id}").fetchone()
 
-        if res is None:
-            raise Exception(f"Record with password id={password_id} and user_id={user_id} not found.")
-
-        return PasswordItemOut.from_db(res)
+        if res is not None:
+            return PasswordItemOut.from_db(res)
 
     def get_passwords(self, user_id: int) -> list[PasswordItemOut]:
         cur = self.conn.cursor()

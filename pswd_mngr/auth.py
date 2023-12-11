@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -28,14 +29,10 @@ class Auth:
     def get_password_hash(password):
         return pwd_context.hash(password)
 
-    @staticmethod
-    def authenticate_user(username: str, password: str) -> UserDB:
-        user = storage.get_user_by_name(username)
-        if not user:
-            return False
-        if not Auth.verify_password(password, user.password):
-            return False
-        return user
+    def authenticate_user(self, username: str, password: str) -> Optional[UserDB]:
+        user = self.storage.get_user_by_name(username)
+        if user and Auth.verify_password(password, user.password):
+            return user
 
     @staticmethod
     def encode_token(user: UserDB) -> str:

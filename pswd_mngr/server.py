@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-c', '--config', default="config.toml")
+parser.add_argument('_')    # FIXME
 args = parser.parse_args()
 config = tomllib.load(open(args.config, "rb"))
 logger.info(config)
@@ -78,7 +79,7 @@ def del_password(item_id: str, token: Annotated[UserDB, Depends(auth.decode_toke
 
 @app.post("/signup")
 def create_user(user: UserIn) -> Response:
-    user.password = Auth.get_password_hash(user.password)
+    user.password = auth.get_password_hash(user.password)
     try:
         res = storage.create_user(user)
     except DuplicateError as e:
@@ -88,8 +89,8 @@ def create_user(user: UserIn) -> Response:
 
 @app.post("/login")
 def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
-    user = Auth.authenticate_user(form_data.username, form_data.password)
-    if not user:
+    user = auth.authenticate_user(form_data.username, form_data.password)
+    if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
@@ -100,4 +101,4 @@ def login(form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", log_level="info", reload=True)
+    uvicorn.run(app, host="0.0.0.0", log_level="info")

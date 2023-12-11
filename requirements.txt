@@ -4,3 +4,4 @@ requests
 pyjwt
 python-jose[cryptography]
 passlib[bcrypt]
+httpx
