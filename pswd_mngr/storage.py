@@ -1,10 +1,11 @@
+import logging
 import sqlite3
 from datetime import datetime as dt
 from sqlite3 import IntegrityError
 
-from fastapi.security import OAuth2PasswordRequestForm
+from pswd_mngr.models import PasswordItemDB, PasswordItemOut, UserDB, UserIn
 
-from pswd_mngr.models import PasswordItemDB, PasswordItemOut, UserDB, UserOut, UserIn
+logger = logging.getLogger(__name__)
 
 
 class StorageError(Exception):
@@ -16,8 +17,9 @@ class DuplicateError(StorageError):
 
 
 class PasswordStorage:
-    def __init__(self):
-        self.conn = sqlite3.connect("passwords.db", check_same_thread=False)
+    def __init__(self, database="password.db"):
+        logger.info(f"connect to '{database}'")
+        self.conn = sqlite3.connect(database, check_same_thread=False)
 
     def save_password(self, item: PasswordItemDB):
         cur = self.conn.cursor()
